@@ -230,11 +230,38 @@ const CreateDialog = ({
     setNote((prev) => ({ ...prev, date }));
   }, [date]);
 
-  const createNote = () => {
+  const createNote = async () => {
     if (note.title === "") {
       return;
     }
+    const tempId = note._id;
     setNotes((prev) => [...prev, note]);
+
+    try {
+      const response = await api.post("/notes", {
+        title: note.title,
+        description: note.description,
+        date: note.date,
+        priority: note.priority,
+        isCompleted: note.isCompleted,
+      });
+
+      setNotes((prev) =>
+        prev.map((n) =>
+          n._id === tempId
+            ? {
+                ...response.data.note,
+                _id: response.data.note._id,
+                date: new Date(response.data.note.date),
+              }
+            : n
+        )
+      );
+    } catch (error) {
+      console.log("Error creating note:", error);
+      setNotes((prev) => prev.filter((n) => n._id !== tempId)); // Rollback on failure
+    }
+
     setNote({
       date: date,
       priority: 1,
