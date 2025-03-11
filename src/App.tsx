@@ -25,9 +25,10 @@ import {
 } from "./components/ui/card";
 import { format } from "date-fns";
 import { Switch } from "./components/ui/switch";
+import api from "./lib/api-client";
 
 type Note = {
-  id: string;
+  _id: string;
   title: string;
   description?: string;
   date: Date;
@@ -39,6 +40,33 @@ const App = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [notes, setNotes] = React.useState<Note[]>([]);
   const [filteredNotes, setFilteredNotes] = React.useState<Note[]>(notes);
+
+  const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchNotes = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get("/notes");
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const formattedNotes = response.data.notes.map((note: any) => ({
+          ...note,
+          date: new Date(note.date),
+        }));
+
+        setNotes(formattedNotes);
+      } catch (err) {
+        setError("Failed to fetch notes");
+        console.log("Error fetching notes:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotes();
+  }, []);
 
   React.useEffect(() => {
     setFilteredNotes(
@@ -57,13 +85,13 @@ const App = () => {
   };
 
   const handleDelete = (note: Note) => {
-    setNotes((prev) => prev.filter((item) => item.id !== note.id));
+    setNotes((prev) => prev.filter((item) => item._id !== note._id));
   };
 
   const handleCompleted = (checked: boolean, noteId: string) => {
     setNotes((prev) =>
       prev.map((note) => {
-        if (note.id === noteId) {
+        if (note._id === noteId) {
           return { ...note, isCompleted: checked };
         } else {
           return note;
@@ -71,6 +99,8 @@ const App = () => {
       })
     );
   };
+
+  if (error) return <p>{error}</p>;
 
   return (
     <Container>
@@ -99,6 +129,8 @@ const App = () => {
                   handleCompleted={handleCompleted}
                 />
               ))
+            ) : loading ? (
+              <div>Loading...</div>
             ) : (
               <div>Make new notes</div>
             )}
@@ -145,7 +177,7 @@ const NoteCard = ({
         <Label>Completed</Label>
         <Switch
           checked={note.isCompleted}
-          onCheckedChange={(checked) => handleCompleted(checked, note.id)}
+          onCheckedChange={(checked) => handleCompleted(checked, note._id)}
         />
       </CardFooter>
     </Card>
@@ -190,8 +222,8 @@ const CreateDialog = ({
     date: date,
     priority: 1,
     title: "",
-    id: generateUniqueId(),
     isCompleted: false,
+    _id: generateUniqueId(),
   });
 
   useEffect(() => {
@@ -207,7 +239,7 @@ const CreateDialog = ({
       date: date,
       priority: 1,
       title: "",
-      id: generateUniqueId(),
+      _id: generateUniqueId(),
       isCompleted: false,
     });
   };
