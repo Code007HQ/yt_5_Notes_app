@@ -84,8 +84,15 @@ const App = () => {
     );
   };
 
-  const handleDelete = (note: Note) => {
+  const handleDelete = async (note: Note) => {
     setNotes((prev) => prev.filter((item) => item._id !== note._id));
+
+    try {
+      await api.delete(`/notes/${note._id}`);
+    } catch (error) {
+      console.log("error deleting: ", error);
+      setNotes((prev) => [...prev, note]);
+    }
   };
 
   const handleCompleted = async (checked: boolean, note: Note) => {
