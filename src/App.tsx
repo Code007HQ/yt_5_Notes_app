@@ -88,16 +88,30 @@ const App = () => {
     setNotes((prev) => prev.filter((item) => item._id !== note._id));
   };
 
-  const handleCompleted = (checked: boolean, noteId: string) => {
+  const handleCompleted = async (checked: boolean, note: Note) => {
+    const updatedNote: Note = { ...note, isCompleted: checked };
     setNotes((prev) =>
-      prev.map((note) => {
-        if (note._id === noteId) {
-          return { ...note, isCompleted: checked };
+      prev.map((item) => {
+        if (item._id === updatedNote._id) {
+          return updatedNote;
         } else {
-          return note;
+          return item;
         }
       })
     );
+
+    try {
+      await api.put(`/notes/${note._id}`, { note: updatedNote });
+    } catch (error) {
+      console.log("Error updating note:", error);
+
+      // Rollback changes on failure
+      setNotes((prev) =>
+        prev.map((item) =>
+          item._id === note._id ? { ...note, isCompleted: !checked } : note
+        )
+      );
+    }
   };
 
   if (error) return <p>{error}</p>;
@@ -148,7 +162,7 @@ const NoteCard = ({
 }: {
   note: Note;
   handleDelete: (note: Note) => void;
-  handleCompleted: (checked: boolean, noteId: string) => void;
+  handleCompleted: (checked: boolean, note: Note) => void;
 }) => {
   return (
     <Card
@@ -177,7 +191,7 @@ const NoteCard = ({
         <Label>Completed</Label>
         <Switch
           checked={note.isCompleted}
-          onCheckedChange={(checked) => handleCompleted(checked, note._id)}
+          onCheckedChange={(checked) => handleCompleted(checked, note)}
         />
       </CardFooter>
     </Card>
